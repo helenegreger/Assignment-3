@@ -99,7 +99,7 @@ Only then (when everything works) turn the code into a function and use map_df()
 See placeholder code here for help.
 
 ```{r}
-library(tidyverse, stringi)
+library(tidyverse, stringi, lme4)
 
 
 read_pitch <- function(filename) {
@@ -213,6 +213,17 @@ library(tidyr)
 # removing all rows including NAs
 df <- df %>% drop_na()
 
+### We will make unique pairs and unique IDs for participants (because controls have same ID as skitzophrenic)
+df <- df %>% mutate(uPairID <- paste(subj, study, sep = "_"), #Create unique pair ID
+                    uPairID <- as.numeric(as.factor(uPairID)), 
+                    uID <- paste(subj, study, diagnosis, sep = "_"), #Create unique ID
+                    uID <- as.numeric(as.factor(uID)))
+
+## We rename these columns
+df <- df %>% rename(uPairID = 'uPairID <- as.numeric(as.factor(uPairID))', PairID = 'uPairID <- paste(subj, study, sep = "_")', ID = 'uID <- paste(subj, study, diagnosis, sep = "_")', uID = 'uID <- as.numeric(as.factor(uID))')
+
+# df %>% select(uPairID, study) %>% unique() %>% group_by(uPairID) %>% summarize(n()) %>% View()
+
 counting <- df %>% group_by(diagnosis, study) %>% summarise(n())
 
 df %>% group_by(diagnosis) %>% dplyr::summarise(N = n(), MeanAge = mean(Age, NA.RM=T), SDAge = sd(Age, na.rm = T), FemaleN=sum(Gender=="F"), MeanSANS=mean(SANS, NA.RM=T), MeanSAPS=mean(SAPS, NA.RM=T))
@@ -237,6 +248,44 @@ N.N.N.B. If you want to estimate the studies separately, you can try this syntax
 - Bonus points: cross-validate the models and report the betas and standard errors from all rounds to get an idea of how robust the estimates are. 
 
 ```{r}
+# we will try to find out what random effects to include
+(library(lme4, lmerTest))
+library(lmerTest)
+
+# we want to scale the inner quartil range so that it is distributed around the mean
+iqr <- scale(df$inner_quartil_range)
+# speakingtime and speechrate are the other two important variables --> we scale these too
+speakingtime <- scale(as.numeric(as.character(df$ASD_speakingtime)))
+speechrate <- scale(as.numeric(as.character(df$speechrate)))
+
+# we create a column for pause duration
+df$pause_dur <- ((as.numeric(df$dur)-(as.numeric(df$ASD_speakingtime))/df$npause))
+
+pause_dur <- scale(df$pause_dur)
+
+
+modeliqr <- lmer(iqr~1+diagnosis + (1+diagnosis|uPairID),
+     data=df, REML=F)
+
+model2 <- lmer(iqr~1+diagnosis + (1|uID),
+     data=df, REML=F)
+
+summary(modeliqr)
+summary(model2)
+
+anova(modeliqr, model2)
+
+# the models seem almost equally good - we pick the first one
+# predicting pitch variability (lower, Hedges' g: -0.55, 95% CIs: -1.06, 0.09)
+modeliqr <- lmer(iqr~1+diagnosis + (1+diagnosis|uPairID),
+     data=df, REML=F)
+modelspeakingtime <- lmer(speakingtime~1+diagnosis + (1+diagnosis|uPairID),
+     data=df, REML=F)
+modelspeechrate <- lmer(as.numeric(speechrate)~1+diagnosis + (1+diagnosis|uPairID),
+     data=df, REML=F)
+modelpause_dur <- lmer(pause_dur~1+diagnosis + (1+diagnosis|uPairID),
+     data=df, REML=F)
+
 
 ```
 
