@@ -99,7 +99,8 @@ Only then (when everything works) turn the code into a function and use map_df()
 See placeholder code here for help.
 
 ```{r}
-library(tidyverse, stringi, lme4)
+library(pacman)
+p_load(tidyverse, stringi, lme4)
 
 
 read_pitch <- function(filename) {
@@ -120,7 +121,8 @@ read_pitch <- function(filename) {
 # as.data.frame(t(df))
 
 # df <- as.data.frame(t(unlist(regmatches("Study1D1S134T1_f0",gregexpr("[[:digit:]]+\\.*[[:digit:]]*", "Study1D1S134T1_f0")))))
-df <- df %>% rename(study=V1, diagnosis = V2, subj= V3, trial = V4, f=V5) %>% select(-c(f))
+# no need for rename now when we have only defined the function - not relevant untill later
+# df <- df %>% rename(study=V1, diagnosis = V2, subj= V3, trial = V4, f=V5) %>% select(-c(f))
 
 
 # str_extract("Study1D0S101T1_f0", "[a-z, A-Z, 0-10][{13,14}]")
@@ -134,7 +136,7 @@ df <- df %>% rename(study=V1, diagnosis = V2, subj= V3, trial = V4, f=V5) %>% se
 
          
 # test it on just one file while writing the function
-test_data = read_pitch("data/Pitch/Study1D0S101T2_f0.txt")
+test_data = read_pitch("Study1D0S101T2_f0.txt")
 
 # applying the function to all the files - the files are removed to the working directory for it to work
 pitch_data <- list.files(pattern = ".txt") %>% purrr::map_df(read_pitch)
